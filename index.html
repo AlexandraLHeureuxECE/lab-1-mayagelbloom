@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic-Tac-Toe</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-gradient);
+      color: var(--text-color);
+      transition: background 0.4s ease, color 0.3s ease;
+    }
+    body[data-theme="midnight"] {
+      --bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      --text-color: #eee;
+      --board-bg: #0f3460;
+      --cell-bg: #16213e;
+      --cell-hover: #1f2d4a;
+      --outcome-bg: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+    }
+    body[data-theme="ocean"] {
+      --bg-gradient: linear-gradient(135deg, #0c4a6e 0%, #075985 50%, #0369a1 100%);
+      --text-color: #f0f9ff;
+      --board-bg: #0e7490;
+      --cell-bg: #155e75;
+      --cell-hover: #0891b2;
+      --outcome-bg: linear-gradient(145deg, #0c4a6e 0%, #155e75 100%);
+    }
+    body[data-theme="forest"] {
+      --bg-gradient: linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%);
+      --text-color: #f0fdf4;
+      --board-bg: #166534;
+      --cell-bg: #14532d;
+      --cell-hover: #15803d;
+      --outcome-bg: linear-gradient(145deg, #14532d 0%, #166534 100%);
+    }
+    body[data-theme="light"] {
+      --bg-gradient: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 50%, #a5b4fc 100%);
+      --text-color: #1e1b4b;
+      --board-bg: #818cf8;
+      --cell-bg: #e0e7ff;
+      --cell-hover: #c7d2fe;
+      --outcome-bg: linear-gradient(145deg, #e0e7ff 0%, #c7d2fe 100%);
+    }
+    h1 {
+      margin: 0 0 0.5rem;
+      font-size: 2rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .status {
+      margin-bottom: 0.5rem;
+      font-size: 1.1rem;
+      min-height: 1.5em;
+    }
+    .status.winner {
+      color: #4ade80;
+      font-weight: 600;
+    }
+    .status.draw {
+      color: #fbbf24;
+      font-weight: 600;
+    }
+    .turn-indicator {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+      align-items: center;
+    }
+    .player-badge {
+      padding: 0.5rem 1.25rem;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .player-badge.player1 {
+      color: #60a5fa;
+      background: rgba(96, 165, 250, 0.15);
+    }
+    .player-badge.player2 {
+      color: #f472b6;
+      background: rgba(244, 114, 182, 0.15);
+    }
+    .player-badge.active {
+      border-color: currentColor;
+      box-shadow: 0 0 20px currentColor;
+      transform: scale(1.08);
+    }
+    .player-badge.active.player1 {
+      background: rgba(96, 165, 250, 0.35);
+    }
+    .player-badge.active.player2 {
+      background: rgba(244, 114, 182, 0.35);
+    }
+    .player-badge .symbol {
+      font-size: 1.2em;
+      margin-left: 0.25rem;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      width: min(280px, 90vw);
+      aspect-ratio: 1;
+      background: var(--board-bg);
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .cell {
+      background: var(--cell-bg);
+      border: 2px solid rgba(0,0,0,0.2);
+      border-radius: 8px;
+      font-size: 2.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .cell:hover:not(.taken) {
+      background: var(--cell-hover);
+      transform: scale(1.02);
+    }
+    .cell.taken {
+      cursor: default;
+    }
+    .cell.player1 { color: #60a5fa; }
+    .cell.player2 { color: #f472b6; }
+    .cell.winning-cell {
+      background: rgba(74, 222, 128, 0.35);
+      border-color: #4ade80;
+      box-shadow: inset 0 0 20px rgba(74, 222, 128, 0.4);
+    }
+    .restart {
+      margin-top: 1.5rem;
+      padding: 0.6rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      background: #4ade80;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .restart:hover {
+      background: #22c55e;
+      transform: scale(1.05);
+    }
+    .restart:active {
+      transform: scale(0.98);
+    }
+    .outcome-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      animation: fadeIn 0.3s ease-out;
+    }
+    .outcome-overlay.visible {
+      display: flex;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .outcome-box {
+      background: var(--outcome-bg);
+      border-radius: 16px;
+      padding: 2rem 3rem;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(255, 255, 255, 0.08);
+      animation: popIn 0.35s ease-out;
+    }
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    .outcome-box .outcome-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin: 0 0 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .outcome-box .outcome-message {
+      font-size: 2.25rem;
+      font-weight: 700;
+      margin: 0;
+      line-height: 1.2;
+    }
+    .outcome-box.winner.player1 .outcome-message {
+      color: #60a5fa;
+      text-shadow: 0 0 30px rgba(96, 165, 250, 0.5);
+    }
+    .outcome-box.winner.player2 .outcome-message {
+      color: #f472b6;
+      text-shadow: 0 0 30px rgba(244, 114, 182, 0.5);
+    }
+    .outcome-box.draw .outcome-message {
+      color: #4ade80;
+      text-shadow: 0 0 30px rgba(74, 222, 128, 0.5);
+    }
+    .settings {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: flex-end;
+      font-size: 0.9rem;
+    }
+    .settings label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .settings select {
+      padding: 0.35rem 0.5rem;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.1);
+      color: inherit;
+      font-size: inherit;
+      cursor: pointer;
+    }
+    body[data-theme="light"] .settings select {
+      border-color: rgba(0,0,0,0.2);
+      background: rgba(255,255,255,0.8);
+      color: #1e1b4b;
+    }
+    .settings select:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .settings select option:disabled {
+      color: #94a3b8;
+    }
+    .settings-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body data-theme="midnight">
+  <div class="settings">
+    <label>
+      Theme
+      <select id="theme-select" aria-label="Choose theme">
+        <option value="midnight">Midnight</option>
+        <option value="ocean">Ocean</option>
+        <option value="forest">Forest</option>
+        <option value="light">Light</option>
+      </select>
+    </label>
+    <div class="settings-row">
+      <label>
+        Player 1
+        <select id="symbol1" aria-label="Player 1 symbol"></select>
+      </label>
+      <label>
+        Player 2
+        <select id="symbol2" aria-label="Player 2 symbol"></select>
+      </label>
+    </div>
+  </div>
+  <h1>Tic-Tac-Toe</h1>
+  <p class="status" id="status">Player 1's turn</p>
+  <div class="turn-indicator">
+    <span class="player-badge player1 active" id="badge-1" aria-current="true">Player 1 <span class="symbol" id="sym1">X</span></span>
+    <span class="player-badge player2" id="badge-2" aria-current="false">Player 2 <span class="symbol" id="sym2">O</span></span>
+  </div>
+  <div class="board" id="board">
+    <button type="button" class="cell" data-index="0" aria-label="Cell 1"></button>
+    <button type="button" class="cell" data-index="1" aria-label="Cell 2"></button>
+    <button type="button" class="cell" data-index="2" aria-label="Cell 3"></button>
+    <button type="button" class="cell" data-index="3" aria-label="Cell 4"></button>
+    <button type="button" class="cell" data-index="4" aria-label="Cell 5"></button>
+    <button type="button" class="cell" data-index="5" aria-label="Cell 6"></button>
+    <button type="button" class="cell" data-index="6" aria-label="Cell 7"></button>
+    <button type="button" class="cell" data-index="7" aria-label="Cell 8"></button>
+    <button type="button" class="cell" data-index="8" aria-label="Cell 9"></button>
+  </div>
+  <button type="button" class="restart" id="restart">New game</button>
+
+  <div class="outcome-overlay" id="outcome-overlay" aria-hidden="true">
+    <div class="outcome-box" id="outcome-box">
+      <p class="outcome-title" id="outcome-title">Game over</p>
+      <p class="outcome-message" id="outcome-message"></p>
+    </div>
+  </div>
+
+  <script>
+    const WIN_LINES = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6]
+    ];
+
+    const SYMBOL_OPTIONS = ['X', 'O', '△', '□', '★', '●', '♦', '♥'];
+
+    let board = ['', '', '', '', '', '', '', '', ''];
+    let currentPlayer = 1;
+    let gameOver = false;
+    let gameStarted = false;
+    let symbols = { 1: 'X', 2: 'O' };
+
+    const statusEl = document.getElementById('status');
+    const boardEl = document.getElementById('board');
+    const restartBtn = document.getElementById('restart');
+    const badge1 = document.getElementById('badge-1');
+    const badge2 = document.getElementById('badge-2');
+    const sym1El = document.getElementById('sym1');
+    const sym2El = document.getElementById('sym2');
+    const symbol1Select = document.getElementById('symbol1');
+    const symbol2Select = document.getElementById('symbol2');
+    const themeSelect = document.getElementById('theme-select');
+    const outcomeOverlay = document.getElementById('outcome-overlay');
+    const outcomeBox = document.getElementById('outcome-box');
+    const outcomeMessage = document.getElementById('outcome-message');
+
+    function syncSymbolOptions() {
+      const other2 = symbol2Select.value;
+      const other1 = symbol1Select.value;
+      Array.from(symbol1Select.options).forEach(opt => {
+        opt.disabled = opt.value === other2;
+      });
+      Array.from(symbol2Select.options).forEach(opt => {
+        opt.disabled = opt.value === other1;
+      });
+    }
+
+    function setSymbolDropdownsEnabled(enabled) {
+      symbol1Select.disabled = !enabled;
+      symbol2Select.disabled = !enabled;
+    }
+
+    function initSymbolDropdowns() {
+      SYMBOL_OPTIONS.forEach(sym => {
+        const o1 = document.createElement('option');
+        o1.value = sym;
+        o1.textContent = sym;
+        if (sym === 'X') o1.selected = true;
+        symbol1Select.appendChild(o1);
+        const o2 = document.createElement('option');
+        o2.value = sym;
+        o2.textContent = sym;
+        if (sym === 'O') o2.selected = true;
+        symbol2Select.appendChild(o2);
+      });
+      syncSymbolOptions();
+      updateSymbolsFromDropdowns();
+      symbol1Select.addEventListener('change', () => {
+        sym1El.textContent = symbol1Select.value;
+        syncSymbolOptions();
+        updateSymbolsFromDropdowns();
+      });
+      symbol2Select.addEventListener('change', () => {
+        sym2El.textContent = symbol2Select.value;
+        syncSymbolOptions();
+        updateSymbolsFromDropdowns();
+      });
+    }
+
+    function updateSymbolsFromDropdowns() {
+      if (!gameStarted) {
+        symbols[1] = symbol1Select.value;
+        symbols[2] = symbol2Select.value;
+      }
+    }
+
+    themeSelect.addEventListener('change', () => {
+      document.body.setAttribute('data-theme', themeSelect.value);
+    });
+
+    function updateStatus(message, className = '') {
+      statusEl.textContent = message;
+      statusEl.className = 'status ' + className;
+    }
+
+    function showOutcome(message, type, winningLine = null, playerNum = null) {
+      outcomeMessage.textContent = message;
+      outcomeBox.className = 'outcome-box ' + type + (type === 'winner' && playerNum ? ' player' + playerNum : '');
+      outcomeOverlay.classList.add('visible');
+      outcomeOverlay.setAttribute('aria-hidden', 'false');
+      if (winningLine) {
+        winningLine.forEach(i => {
+          boardEl.querySelector(`.cell[data-index="${i}"]`).classList.add('winning-cell');
+        });
+      }
+    }
+
+    function hideOutcome() {
+      outcomeOverlay.classList.remove('visible');
+      outcomeOverlay.setAttribute('aria-hidden', 'true');
+      boardEl.querySelectorAll('.cell').forEach(cell => cell.classList.remove('winning-cell'));
+    }
+
+    function setActivePlayer(playerNum) {
+      if (playerNum === 1) {
+        badge1.classList.add('active');
+        badge1.setAttribute('aria-current', 'true');
+        badge2.classList.remove('active');
+        badge2.setAttribute('aria-current', 'false');
+      } else {
+        badge2.classList.add('active');
+        badge2.setAttribute('aria-current', 'true');
+        badge1.classList.remove('active');
+        badge1.setAttribute('aria-current', 'false');
+      }
+    }
+
+    function checkWinner() {
+      for (const [a, b, c] of WIN_LINES) {
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+          return { symbol: board[a], line: [a, b, c] };
+        }
+      }
+      return null;
+    }
+
+    function getPlayerForSymbol(symbol) {
+      return symbols[1] === symbol ? 1 : 2;
+    }
+
+    function checkDraw() {
+      return board.every(cell => cell !== '');
+    }
+
+    function handleCellClick(e) {
+      if (gameOver) return;
+      const cell = e.target.closest('.cell');
+      if (!cell || cell.classList.contains('taken')) return;
+
+      const index = parseInt(cell.dataset.index, 10);
+      const sym = symbols[currentPlayer];
+      board[index] = sym;
+      cell.textContent = sym;
+      cell.classList.add('taken', 'player' + currentPlayer);
+
+      if (!gameStarted) {
+        gameStarted = true;
+        setSymbolDropdownsEnabled(false);
+      }
+
+      const winnerResult = checkWinner();
+      if (winnerResult) {
+        gameOver = true;
+        badge1.classList.remove('active');
+        badge2.classList.remove('active');
+        badge1.removeAttribute('aria-current');
+        badge2.removeAttribute('aria-current');
+        const playerNum = getPlayerForSymbol(winnerResult.symbol);
+        updateStatus(`Player ${playerNum} wins!`, 'winner');
+        showOutcome(`Player ${playerNum} wins!`, 'winner', winnerResult.line, playerNum);
+        return;
+      }
+      if (checkDraw()) {
+        gameOver = true;
+        badge1.classList.remove('active');
+        badge2.classList.remove('active');
+        badge1.removeAttribute('aria-current');
+        badge2.removeAttribute('aria-current');
+        updateStatus("It's a draw!", 'draw');
+        showOutcome("It's a draw!", 'draw');
+        return;
+      }
+
+      currentPlayer = currentPlayer === 1 ? 2 : 1;
+      updateStatus(`Player ${currentPlayer}'s turn`);
+      setActivePlayer(currentPlayer);
+    }
+
+    function restart() {
+      gameStarted = false;
+      setSymbolDropdownsEnabled(true);
+
+      symbols[1] = symbol1Select.value;
+      symbols[2] = symbol2Select.value;
+      if (symbols[1] === symbols[2]) {
+        symbols[2] = SYMBOL_OPTIONS.find(s => s !== symbols[1]) || 'O';
+        symbol2Select.value = symbols[2];
+      }
+      sym1El.textContent = symbols[1];
+      sym2El.textContent = symbols[2];
+      syncSymbolOptions();
+
+      board = ['', '', '', '', '', '', '', '', ''];
+      currentPlayer = 1;
+      gameOver = false;
+
+      boardEl.querySelectorAll('.cell').forEach(cell => {
+        cell.textContent = '';
+        cell.classList.remove('taken', 'player1', 'player2', 'winning-cell');
+      });
+
+      hideOutcome();
+      updateStatus("Player 1's turn");
+      setActivePlayer(1);
+    }
+
+    initSymbolDropdowns();
+
+    outcomeOverlay.addEventListener('click', (e) => {
+      if (e.target === outcomeOverlay) restart();
+    });
+
+    boardEl.addEventListener('click', handleCellClick);
+    restartBtn.addEventListener('click', restart);
+  </script>
+</body>
+</html>
